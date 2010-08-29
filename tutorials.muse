@@ -1,0 +1,16 @@
+* Tutorials
+
+
+[[http://www.princeton.edu/~gdetre/software/freex/][Home]] - [[tutorials][Tutorials]] - [[http://www.princeton.edu/~gdetre/software/freex/downloads][Downloads]] - [[http://www.princeton.edu/~gdetre/software/freex/docs][Docs]]
+
+----
+
+[[quickstart][Quickstart]] - quick and dirty introduction to keeping a
+journal using freex.
+
+[[intro_tutorial][Intro tutorial]] - this is more detailed, 
+showing you a little more of the backend and discussing some
+of the finer points of hierarchical tagging.
+
+
+

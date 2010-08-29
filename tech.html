@@ -1,0 +1,254 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<html>
+  <head>
+    <title>
+      Greg Detre - tech
+    </title>
+    <meta name="generator" content="muse.el">
+    <meta http-equiv="Content-Type"
+          content="text/html; charset=iso-8859-1">
+    
+    
+<link rel="stylesheet" type="text/css" charset="utf-8" media="all" href="common.css" />
+<link rel="stylesheet" type="text/css" charset="utf-8" media="screen" href="screen.css" />
+<link rel="stylesheet" type="text/css" charset="utf-8" media="print" href="print.css" />
+
+  </head>
+  <body>
+
+    <!-- Page published by Emacs Muse begins here -->
+<h2><a name="sec1" id="sec1"></a>
+Technical overview of the Freex source code</h2>
+
+<dl class="contents">
+<dt class="contents">
+<a href="#sec1">Technical overview of the Freex source code</a>
+</dt>
+<dd>
+<dl class="contents">
+<dt class="contents">
+<a href="#sec2">Introduction</a>
+</dt>
+<dt class="contents">
+<a href="#sec3">freex-conf-test.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec4">freex-mode.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec5">freex-embed.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec6">freex-fontify.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec7">freex-xml.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec8">freex-meta.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec9">freex_sqlalchemy.py</a>
+</dt>
+<dt class="contents">
+<a href="#sec10">freex-timestamp.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec11">freex_sqlalchemy_test.py</a>
+</dt>
+<dt class="contents">
+<a href="#sec12">run_tests</a>
+</dt>
+<dt class="contents">
+<a href="#sec13">freex.el</a>
+</dt>
+<dt class="contents">
+<a href="#sec14">Acknowledgments</a>
+</dt>
+</dl>
+</dd>
+</dl>
+
+
+<h3><a name="sec2" id="sec2"></a>
+Introduction</h3>
+
+<p class="first">If you're interested in hacking the Freex source code, this
+is a high-level guide for what's what. It assumes that you
+already have things working (see <a href="install.html">install</a>).</p>
+
+<p>The main thorny bits of code relate to:</p>
+
+<ul>
+<li>Interfacing with Pymacs to freex_sqlalchemy.py, to access
+all the metadata stuff stored in the sqlite database</li>
+<li>Using Emacs' overlays functionality to allow embedded
+nuggets within nuggets, and also to view and edit
+metadata</li>
+<li>Automatically creating implicit links to any text that
+matches a regex (containing all the nugget aliases in
+your database)</li>
+</ul>
+
+<p>Freex is a minor mode. However, the embedding stuff requires
+us to override the standard saving mechanism, which can make
+interfacing with the major mode complicated in some cases.</p>
+
+
+<h3><a name="sec3" id="sec3"></a>
+freex-conf-test.el</h3>
+
+<p class="first">This is the sample configuration file, requiring only a few changes to
+get you up and running. It'll give you an idea of the main variables
+to change if you want to play with Freex's major functionality.</p>
+
+
+<h3><a name="sec4" id="sec4"></a>
+freex-mode.el</h3>
+
+<p class="first">This defines all the initialization and clenaup for the Freex minor
+mode, including:</p>
+
+<ul>
+<li>Checking that the current file is in the freex data
+directory</li>
+<li>Setting up basic hooks, default variables and keybindings</li>
+<li>Adding the buffer-local variables that the buffer needs in
+order to know how to save itself to the database</li>
+<li>Initializing fontification</li>
+</ul>
+
+
+<h3><a name="sec5" id="sec5"></a>
+freex-embed.el</h3>
+
+<p class="first">Provides the mechanisms for embedding nuggets within other nuggets,
+using Emacs overlays. This also includes the Freex-specific save
+mechanism, which handles saving embedded overlays, and mirroring the
+contents to the database.</p>
+
+<h4>Embedding</h4>
+
+<p class="first">If you want to embed a nugget or some
+metadata, then you include an xml element, such as:</p>
+
+<pre class="example">
+&lt;file&gt;blah.freex&lt;/file&gt;
+</pre>
+
+<p>and then run freex-embed-buffer. That calls on freex-xml.el to go
+through the buffer, looks for such xml elements,</p>
+
+<p>The process of embedding a nugget replaces the
+<pre class="example">&lt;file&gt;...&lt;/file&gt;</pre> xml element, with an overlay
+containing the contents of the file specified. Importantly, every
+freex overlay contains various properties, such as:</p>
+
+<ul>
+<li>'id' relates to the nugget id field in the database</li>
+<li>'insert-funct' tells the overlay which function to use to get its
+contents from</li>
+<li>'save-funct' tells the overlay which function to call at save to
+store its contents</li>
+</ul>
+
+<p>In this way, you can easily create new xml elements, and by specifying
+an insert-funct and save-funct, you can make them do anything you
+like.</p>
+
+<p>Notably, freex buffers themselves have a buffer-local
+'freex-embed-ov-props' variable, so that the buffer knows which nugget
+in the database it relates to.</p>
+
+
+
+<h3><a name="sec6" id="sec6"></a>
+freex-fontify.el</h3>
+
+<p class="first">Provides all the font-lock mechanisms for going through your buffer,
+looking for xml elements and implicit links with various complicated
+regexes. The implicit link regular expression can get pretty huge,
+because it's basically a big chain of disjunctions including every
+alias in your database. If you have lots of nuggets, this can bring
+Emacs' regex engine to its knees, and so we actually run the regex in
+python.</p>
+
+
+<h3><a name="sec7" id="sec7"></a>
+freex-xml.el</h3>
+
+<p class="first">Convenience functions for dealing with xml elements.</p>
+
+
+<h3><a name="sec8" id="sec8"></a>
+freex-meta.el</h3>
+
+<p class="first">This is the main gateway between Emacs and the database, via
+freex_sqlalchemy:</p>
+
+<ul>
+<li>Connects to the database</li>
+<li>Sets various variables (e.g. location of freex data directory)</li>
+<li>Deals with embedded metadata overlays</li>
+<li>Defines various elements (e.g. tag-parents/children, aliases)</li>
+<li>Updates database when the filesystem changes</li>
+<li>Freex file finding and tab completion</li>
+</ul>
+
+
+<h3><a name="sec9" id="sec9"></a>
+freex_sqlalchemy.py</h3>
+
+<p class="first">This contains all the python code for interacting with the databse:</p>
+
+<ul>
+<li>initializing a new database</li>
+<li>adding, removing and modifying nuggets</li>
+<li>querying</li>
+</ul>
+
+
+<h3><a name="sec10" id="sec10"></a>
+freex-timestamp.el</h3>
+
+<p class="first">This updates the database with a timestamp every time a freex nugget
+is modified.</p>
+
+
+<h3><a name="sec11" id="sec11"></a>
+freex_sqlalchemy_test.py</h3>
+
+<p class="first">Lots of unit tests for all the python database functions.</p>
+
+
+<h3><a name="sec12" id="sec12"></a>
+run_tests</h3>
+
+<p class="first">Handy alias for running the python unit tests.</p>
+
+
+<h3><a name="sec13" id="sec13"></a>
+freex.el</h3>
+
+<p class="first">A few utility functions</p>
+
+
+
+<h3><a name="sec14" id="sec14"></a>
+Acknowledgments</h3>
+
+<p class="first">We want to thank the Muse developers, since huge chunks of their code
+provided inspiration and foundation for the Freex fontification and
+xml parsing.</p>
+
+
+
+
+<!-- Page published by Emacs Muse ends here --> 
+
+<hr>
+
+<script language="javascript" src="footer.js">
+
+  </body>
+</html>
